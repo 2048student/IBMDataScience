@@ -5,83 +5,57 @@ import dash_html_components as html
 import dash_core_components as dcc
 from dash.dependencies import Input, Output
 import plotly.express as px
-from js import fetch
-import io
 
-# Read the spacex data into pandas dataframe
-URL = 'https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/IBM-DS0321EN-SkillsNetwork/datasets/spacex_launch_geo.csv'
-resp = await fetch(URL)
-spacex_csv_file = io.BytesIO((await resp.arrayBuffer()).to_py())
-spacex_df=pd.read_csv(spacex_csv_file)
+# Read the airline data into pandas dataframe
+spacex_df = pd.read_csv("spacex_launch_dash.csv")
+max_payload = spacex_df['Payload Mass (kg)'].max()
+min_payload = spacex_df['Payload Mass (kg)'].min()
 
 # Create a dash application
 app = dash.Dash(__name__)
 
-  dcc.Dropdown(id='site-dropdown',
-                options=[
-                    {'label': 'All Sites', 'value': 'ALL'},
-                    {'label': 'site1', 'value': 'CCAFS LC-40'},
-                    {'label': 'site2', 'value': 'CCAFS SLC-40'},
-                    {'label': 'site3', 'value': 'KSC LC-39A'},
-                    {'label': 'site4', 'value': 'VAFB SLC-4E'},
-                ],
-                value='ALL',
-                placeholder="Select a Launch Site here",
-                searchable=True
-                ),
-"""
-# Build dash app layout
-app.layout = html.Div(children=[ html.H1('Flight Delay Time Statistics', 
-                                style={'textAlign': 'center', 'color': '#503D36',
-                                'font-size': 30}),
-                                html.Div(["Input Year: ", dcc.Input(id='input-year', value='2010', 
-                                type='number', style={'height':'35px', 'font-size': 30}),], 
-                                style={'font-size': 30}),
+# Create an app layout
+app.layout = html.Div(children=[html.H1('SpaceX Launch Records Dashboard',
+                                        style={'textAlign': 'center', 'color': '#503D36',
+                                               'font-size': 40}),
+                                # TASK 1: Add a dropdown list to enable Launch Site selection
+                                # The default select value is for ALL sites
+                                # dcc.Dropdown(id='site-dropdown',...)
+  				dcc.Dropdown(id='site-dropdown',
+                			options=[
+                    				{'label': 'All Sites', 'value': 'ALL'},
+                    				{'label': 'site1', 'value': 'CCAFS LC-40'},
+                    				{'label': 'site2', 'value': 'CCAFS SLC-40'},
+                    				{'label': 'site3', 'value': 'KSC LC-39A'},
+                    				{'label': 'site4', 'value': 'VAFB SLC-4E'},
+                				],
+                			value='ALL',
+                			placeholder="Select a Launch Site here",
+                			searchable=True
+                			),
                                 html.Br(),
-                                html.Br(), 
-                                # Segment 1
-                                html.Div([
-                                        html.Div(dcc.Graph(id='carrier-plot')),
-                                        html.Div(dcc.Graph(id='weather-plot'))
-                                ], style={'display': 'flex'}),
-                                # Segment 2
-                                html.Div([
-                                        html.Div(dcc.Graph(id='nas-plot')),
-                                        html.Div(dcc.Graph(id='security-plot'))
-                                ], style={'display': 'flex'}),
-                                # Segment 3
-                                html.Div(dcc.Graph(id='late-plot'), style={'width':'65%'})
+
+                                # TASK 2: Add a pie chart to show the total successful launches count for all sites
+                                # If a specific launch site was selected, show the Success vs. Failed counts for the site
+				dcc.RangeSlider(id='payload-slider',
+                				min=0, max=10000, step=1000,
+                				marks={0: '0',
+                       				       100: '100'},
+                				value=[min_value, max_value]) 
+				
+                                html.Div(dcc.Graph(id='success-pie-chart')),
+                                html.Br(),
+
+                                html.P("Payload range (Kg):"),
+                                # TASK 3: Add a slider to select payload range
+                                #dcc.RangeSlider(id='payload-slider',...)
+
+                                # TASK 4: Add a scatter chart to show the correlation between payload and launch success
+                                html.Div(dcc.Graph(id='success-payload-scatter-chart')),
                                 ])
-"""
-""" Compute_info function description
 
-This function takes in airline data and selected year as an input and performs computation for creating charts and plots.
-
-Arguments:
-    airline_data: Input airline data.
-    entered_year: Input year for which computation needs to be performed.
-    
-Returns:
-    Computed average dataframes for carrier delay, weather delay, NAS delay, security delay, and late aircraft delay.
-
-"""
-"""Callback Function
-
-
-
-Function that returns fugures using the provided input year.
-
-Arguments:
-
-    entered_year: Input year provided by the user.
-    
-Returns:
-
-    List of figures computed using the provided helper function `compute_info`.
-"""
-
-
-# Function decorator to specify function input and output
+# TASK 2:
+# Add a callback function for `site-dropdown` as input, `success-pie-chart` as output
 @app.callback(Output(component_id='success-pie-chart', component_property='figure'),
               Input(component_id='site-dropdown', component_property='value'))
 def get_pie_chart(entered_site):
@@ -97,35 +71,9 @@ def get_pie_chart(entered_site):
         names='pie chart names', 
         title='title')
         return fig
-        # return the outcomes piechart for a selected site
-"""
-# Computation to callback function and return graph
-def get_graph(entered_year):
-    
-    # Compute required information for creating graph from the data
-    avg_car, avg_weather, avg_NAS, avg_sec, avg_late = compute_info(airline_data, entered_year)
-            
-    # Line plot for carrier delay
-    carrier_fig = px.line(avg_car, x='Month', y='CarrierDelay', color='Reporting_Airline', title='Average carrrier delay time (minutes) by airline')
-    # Line plot for weather delay
-    weather_fig = px.line(avg_weather, x='Month', y='WeatherDelay', color='Reporting_Airline', title='Average weather delay time (minutes) by airline')
-    # Line plot for nas delay
-    nas_fig = px.line(avg_NAS, x='Month', y='NASDelay', color='Reporting_Airline', title='Average NAS delay time (minutes) by airline')
-    # Line plot for security delay
-    sec_fig = px.line(avg_sec, x='Month', y='SecurityDelay', color='Reporting_Airline', title='Average security delay time (minutes) by airline')
-    # Line plot for late aircraft delay
-    late_fig = px.line(avg_late, x='Month', y='LateAircraftDelay', color='Reporting_Airline', title='Average late aircraft delay time (minutes) by airline')
-            
-    return[carrier_fig, weather_fig, nas_fig, sec_fig, late_fig]
-"""
+# TASK 4:
 
-dcc.RangeSlider(id='payload-slider',
-                min=0, max=10000, step=1000,
-                marks={0: '0',
-                       100: '100'},
-                value=[min_value, max_value]) 
-
-
+# Add a callback function for `site-dropdown` and `payload-slider` as inputs, `success-payload-scatter-chart` as output
 @app.callback(Output(component_id='success-payload-scatter-chart', component_property='figure'),
               Input(component_id='site-dropdown', component_property='value'),
               Input(component_id="payload-slider", component_property="value"))
